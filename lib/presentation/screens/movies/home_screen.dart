@@ -4,6 +4,7 @@ import 'package:cinemapedia/presentation/providers/movies/initial_loading_provid
 import 'package:cinemapedia/presentation/providers/movies/movies_providers.dart';
 import 'package:cinemapedia/presentation/providers/movies/movies_repository_provider.dart';
 import 'package:cinemapedia/presentation/providers/movies/movies_slideshow_provider.dart';
+import 'package:cinemapedia/presentation/providers/search/search_movies_provider.dart';
 import 'package:cinemapedia/presentation/widgets/movies/movie_horizontal_listview.dart';
 import 'package:cinemapedia/presentation/widgets/movies/movies_slideshow.dart';
 import 'package:cinemapedia/presentation/widgets/shared/custom_appbar.dart';
@@ -49,7 +50,6 @@ class _HomeViewState extends ConsumerState<_HomeView> {
 
   @override
   Widget build(BuildContext context) {
-
     final colors = Theme.of(context).colorScheme;
     final textStyle = Theme.of(context).textTheme.titleMedium;
 
@@ -63,28 +63,38 @@ class _HomeViewState extends ConsumerState<_HomeView> {
     final upcoming = ref.watch(upcomingMoviesProvider);
     final slideshowMovies = ref.watch(moviesSlideshowProvider);
 
-
     return CustomScrollView(slivers: [
       SliverAppBar(
         floating: true,
 
         title: Row(
           children: [
-            Icon(Icons.movie_outlined, color: colors.primary,),
-            const SizedBox(width: 5,),
-            Text('Cinemapedia', style: textStyle,),
+            Icon(
+              Icons.movie_outlined,
+              color: colors.primary,
+            ),
+            const SizedBox(
+              width: 5,
+            ),
+            Text(
+              'Cinemapedia',
+              style: textStyle,
+            ),
           ],
         ),
         actions: [
           IconButton(
-              onPressed: ()  {
-                final movieRepository = ref.read(movieRepositoryProvider);
+              onPressed: () {
+                final searchedMovies = ref.read(searchedMoviesProvider);
+                final searchQuery = ref.read(searchQueryProvider);
 
                 final movie = showSearch<Movie?>(
-                    context: context,
-                    delegate: SearchMovieDelegate(
-                        searchMovies: movieRepository.searchMovies)
-                ).then((movie) {
+                        query: searchQuery,
+                        context: context,
+                        delegate: SearchMovieDelegate(
+                            initialMovies: searchedMovies,
+                            searchMovies: ref.read(searchedMoviesProvider.notifier).searchMoviesByQuery ))
+                    .then((movie) {
                   if (movie == null) return;
                   context.push('/movie/${movie.id}');
                 });
@@ -106,27 +116,28 @@ class _HomeViewState extends ConsumerState<_HomeView> {
                   movies: nowPlaying,
                   title: 'En cines',
                   badge: 'Lunes 20',
-                  loadNextPage: () => ref.read(nowPlayingMoviesProvider.notifier).loadNextPage()
-              ),
-
+                  loadNextPage: () => ref
+                      .read(nowPlayingMoviesProvider.notifier)
+                      .loadNextPage()),
               MovieHorizontalListView(
                   movies: upcoming,
                   title: 'Proximamente',
                   badge: 'En este mes',
-                  loadNextPage: () => ref.read(upcomingMoviesProvider.notifier).loadNextPage()
-              ),
-
+                  loadNextPage: () =>
+                      ref.read(upcomingMoviesProvider.notifier).loadNextPage()),
               MovieHorizontalListView(
                   movies: popular,
                   title: 'Populares',
-                  loadNextPage: () => ref.read(popularMoviesProvider.notifier).loadNextPage()
-              ),
+                  loadNextPage: () =>
+                      ref.read(popularMoviesProvider.notifier).loadNextPage()),
               MovieHorizontalListView(
                   movies: topRated,
                   title: 'Mejor Calificadas',
-                  loadNextPage: () => ref.read(topRatedMoviesProvider.notifier).loadNextPage()
-              ),
-              const SizedBox(height: 50,)
+                  loadNextPage: () =>
+                      ref.read(topRatedMoviesProvider.notifier).loadNextPage()),
+              const SizedBox(
+                height: 50,
+              )
             ],
           );
         },
