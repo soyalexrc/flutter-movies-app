@@ -1,3 +1,4 @@
+import 'package:cinemapedia/domain/entities/movie.dart';
 import 'package:cinemapedia/presentation/delegates/search_movie_movie_delegate.dart';
 import 'package:cinemapedia/presentation/providers/movies/initial_loading_provider.dart';
 import 'package:cinemapedia/presentation/providers/movies/movies_providers.dart';
@@ -10,6 +11,7 @@ import 'package:cinemapedia/presentation/widgets/shared/custom_bottom_navigation
 import 'package:cinemapedia/presentation/widgets/shared/full_screen_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatelessWidget {
   static const name = 'home-screen';
@@ -75,14 +77,19 @@ class _HomeViewState extends ConsumerState<_HomeView> {
         ),
         actions: [
           IconButton(
-              onPressed: () {
+              onPressed: ()  {
                 final movieRepository = ref.read(movieRepositoryProvider);
 
-                showSearch(
+                final movie = showSearch<Movie?>(
                     context: context,
-                    delegate: SearchMovieDelegate(searchMovies: movieRepository.searchMovies));
+                    delegate: SearchMovieDelegate(
+                        searchMovies: movieRepository.searchMovies)
+                ).then((movie) {
+                  if (movie == null) return;
+                  context.push('/movie/${movie.id}');
+                });
               },
-              icon: Icon(Icons.search))
+              icon: const Icon(Icons.search))
         ],
         // flexibleSpace: FlexibleSpaceBar(
         //   title: CustomAppbar(),
