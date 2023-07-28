@@ -1,5 +1,7 @@
+import 'package:cinemapedia/presentation/delegates/search_movie_movie_delegate.dart';
 import 'package:cinemapedia/presentation/providers/movies/initial_loading_provider.dart';
 import 'package:cinemapedia/presentation/providers/movies/movies_providers.dart';
+import 'package:cinemapedia/presentation/providers/movies/movies_repository_provider.dart';
 import 'package:cinemapedia/presentation/providers/movies/movies_slideshow_provider.dart';
 import 'package:cinemapedia/presentation/widgets/movies/movie_horizontal_listview.dart';
 import 'package:cinemapedia/presentation/widgets/movies/movies_slideshow.dart';
@@ -46,6 +48,9 @@ class _HomeViewState extends ConsumerState<_HomeView> {
   @override
   Widget build(BuildContext context) {
 
+    final colors = Theme.of(context).colorScheme;
+    final textStyle = Theme.of(context).textTheme.titleMedium;
+
     final initialLoading = ref.watch(initialLoadingProvider);
 
     if (initialLoading) return const FullScreenloader();
@@ -58,11 +63,30 @@ class _HomeViewState extends ConsumerState<_HomeView> {
 
 
     return CustomScrollView(slivers: [
-      const  SliverAppBar(
+      SliverAppBar(
         floating: true,
-        flexibleSpace: FlexibleSpaceBar(
-          title: CustomAppbar(),
+
+        title: Row(
+          children: [
+            Icon(Icons.movie_outlined, color: colors.primary,),
+            const SizedBox(width: 5,),
+            Text('Cinemapedia', style: textStyle,),
+          ],
         ),
+        actions: [
+          IconButton(
+              onPressed: () {
+                final movieRepository = ref.read(movieRepositoryProvider);
+
+                showSearch(
+                    context: context,
+                    delegate: SearchMovieDelegate(searchMovies: movieRepository.searchMovies));
+              },
+              icon: Icon(Icons.search))
+        ],
+        // flexibleSpace: FlexibleSpaceBar(
+        //   title: CustomAppbar(),
+        // ),
       ),
       SliverList(
           delegate: SliverChildBuilderDelegate(
