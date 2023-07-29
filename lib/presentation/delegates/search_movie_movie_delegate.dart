@@ -9,10 +9,11 @@ typedef SearchMoviesCallback = Future<List<Movie>> Function(String query);
 
 class SearchMovieDelegate extends SearchDelegate<Movie?> {
   StreamController<List<Movie>> debounceMovies = StreamController.broadcast();
+  StreamController<bool> isLoading = StreamController.broadcast();
   Timer? _debounceTimer;
 
   final SearchMoviesCallback searchMovies;
-  final List<Movie> initialMovies;
+  List<Movie> initialMovies;
 
   SearchMovieDelegate({
     required this.searchMovies,
@@ -21,20 +22,40 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
 
   void clearStreams() {
     debounceMovies.close();
+    isLoading.close();
   }
 
   void _onQueryChanged(String query) {
+    isLoading.add(true);
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
 
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
-      // if (query.isEmpty) {
-      //   debounceMovies.add([]);
-      //   return;
-      // }
 
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       final movies = await searchMovies(query);
       debounceMovies.add(movies);
+      initialMovies = movies;
+      isLoading.add(false);
     });
+  }
+
+  Widget buildResultsAndSuggestions() {
+    return StreamBuilder(
+        initialData: initialMovies,
+        stream: debounceMovies.stream,
+        builder: (context, snapshot) {
+          final movies = snapshot.data ?? [];
+          return ListView.builder(
+              itemCount: movies.length,
+              itemBuilder: (context, index) {
+                return MovieSearchItem(
+                  movie: movies[index],
+                  onMovieSelected: (context, movie) {
+                    clearStreams();
+                    close(context, movie);
+                  },
+                );
+              });
+        });
   }
 
   @override
@@ -43,11 +64,35 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
   @override
   List<Widget>? buildActions(BuildContext context) {
     return [
-      FadeIn(
-        animate: query.isNotEmpty,
-        duration: const Duration(microseconds: 500),
-        child: IconButton(onPressed: () => query = '', icon: Icon(Icons.clear)),
-      )
+      StreamBuilder(
+          stream: isLoading.stream,
+          initialData: false,
+          builder: (context, snapshot) {
+            if (snapshot.data ?? false) {
+              return  SpinPerfect(
+                spins: 10,
+                infinite: true,
+                duration: const Duration(seconds: 20),
+                child: IconButton(
+                    onPressed: () => query = '', icon: Icon(Icons.refresh_rounded)),
+              );
+            } else {
+              return FadeIn(
+                animate: query.isNotEmpty,
+                duration: const Duration(microseconds: 500),
+                child: IconButton(
+                    onPressed: () => query = '', icon: Icon(Icons.clear)),
+              );
+            }
+          }),
+
+
+
+      // FadeIn(
+      //   animate: query.isNotEmpty,
+      //   duration: const Duration(microseconds: 500),
+      //   child: IconButton(onPressed: () => query = '', icon: Icon(Icons.clear)),
+      // ),
     ];
   }
 
@@ -63,32 +108,14 @@ class SearchMovieDelegate extends SearchDelegate<Movie?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    return const Text('BuildResults');
+    return buildResultsAndSuggestions();
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
     _onQueryChanged(query);
 
-    return StreamBuilder(
-        initialData: initialMovies,
-        stream: debounceMovies.stream,
-        builder: (context, snapshot) {
-          // print('realizando peticion');
-
-          final movies = snapshot.data ?? [];
-          return ListView.builder(
-              itemCount: movies.length,
-              itemBuilder: (context, index) {
-                return MovieSearchItem(
-                  movie: movies[index],
-                  onMovieSelected: (context, movie) {
-                    clearStreams();
-                    close(context, movie);
-                  },
-                );
-              });
-        });
+    return buildResultsAndSuggestions();
   }
 }
 
